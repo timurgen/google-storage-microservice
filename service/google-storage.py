@@ -1,4 +1,4 @@
-from flask import Flask, Response
+from flask import Flask, Response, request
 import datetime
 import json
 import os
@@ -39,11 +39,14 @@ for blob in blobs:
 print("done")
 
 
-@app.route('/', methods=['GET'])
+@app.route('/config', methods=["GET", "POST"])
 def get_files():
 
-    remote_file_path = 'incoming/' # google store target location
-    source_file_config = json.loads(os.getenv("SOURCE_FILE_CONFIG"))
+    # google store target location
+    remote_file_path = 'incoming/'
+
+    # catch the posted data
+    source_file_config = request.get_json()
 
     logger.debug('source file config: {}'.format(source_file_config))
 

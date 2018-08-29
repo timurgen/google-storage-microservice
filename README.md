@@ -6,7 +6,9 @@
 
 `GOOGLE_APPLICATION_CREDENTIALS_CONTENT` - Content of Google Storage credential file. This content is written to the file specified in `GOOGLE_APPLICATION_CREDENTIALS`. 
 
-`SOURCE_FILE_CONFIG` - JSON formatted config for source file names and url locations:
+## Usage
+
+The microservice listens to `/config` at port 5000 and expects JSON formatted config for where it is to fetch source files:
 
 ```
 [
@@ -17,6 +19,7 @@
     ...
 ]
 ```
+
 ## Example System Config
 ```
 {
@@ -25,11 +28,10 @@
   "docker": {
     "environment": {
       "GOOGLE_APPLICATION_CREDENTIALS": "google-store-credentials.json",
-      "GOOGLE_APPLICATION_CREDENTIALS_CONTENT": "$SECRET(google-storage-credential-content)",
-      "SOURCE_FILE_CONFIG": "$ENV(source-file-config)"
+      "GOOGLE_APPLICATION_CREDENTIALS_CONTENT": "$SECRET(google-storage-credential-content)"
     },
     "image": "sesamcommunity/google-storage-microservice:latest",
-    "port": 5555
+    "port": 5000
   }
 }
 ```
