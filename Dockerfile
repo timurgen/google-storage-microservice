@@ -9,5 +9,5 @@ RUN pip install -r requirements.txt
 
 EXPOSE 5000/tcp
 
-ENTRYPOINT ["python"]
+ENTRYPOINT ["python3"]
 CMD ["google-storage.py"]

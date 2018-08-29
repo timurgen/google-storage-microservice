@@ -1,21 +1,19 @@
-from flask import Flask, Response, request
+from flask import Flask, Response
 import datetime
 import json
 import os
 import logging
 from google.cloud import storage
+import requests
 
 app = Flask(__name__)
 
-google_store_credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+
+credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
 credentials = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_CONTENT")
 
 # write out service config from env var to known file
-
-# f = open(google_store_credentials_path, "wb") # Why the heck is this not writing valid json?!?
-# f.write(credentials.encode())
-
-with open(google_store_credentials_path, "wb") as out_file:
+with open(credentials_path, "wb") as out_file:
     out_file.write(credentials.encode())
 
 
@@ -23,6 +21,7 @@ storage_client = storage.Client()
 
 buckets = storage_client.list_buckets()
 
+print('Buckets:')
 for bucket in buckets:
     print(bucket)
 
@@ -40,46 +39,45 @@ for blob in blobs:
 print("done")
 
 
-@app.route('/files/{value}', methods=['GET'])
-def get_file():
-   pass
+@app.route('/', methods=['GET'])
+def get_files():
 
+    remote_file_path = 'incoming/' # google store target location
+    source_file_config = json.loads(os.getenv("SOURCE_FILE_CONFIG"))
 
-# Read from metadata file for manually uploaded files
-@app.route('/entities', methods=['GET'])
-def get_entities():
-    def generate():
-        objs = []
-        first = True
-        yield "["
-        for key in objs:
-            # do something with the key
-            entity = {"_id": key }
-            if not first:
-                yield ","
-            yield json.dumps(entity)
-            first = False
-        yield "]"
+    logger.debug('source file config: {}'.format(source_file_config))
 
-    return Response(generate(), mimetype='application/json')
+    for entity in source_file_config:
+        # get file config for hosted files
+        source_file_name = entity['file_id']
+        source_file_path = entity['file_url']
 
+        logger.debug('source file: {}{}'.format(source_file_path, source_file_name))
 
-@app.route('/entities', methods=['POST'])
-def post_entities():
-    entities = request.get_json()
-    for entity in entities:
-        entity_id = entity["_id"]
-        fileUrl = entity["fileUrl"]
+        # download hosted files locally
+        r = requests.get(source_file_path + source_file_name, stream=True)
 
-        # get file and upload to google
+        tmp_file = 'tmp'
+        with open(tmp_file, 'wb') as fd:
+            for chunk in r.iter_content(chunk_size=128):
+                fd.write(chunk)
 
-    return Response("Thanks!", mimetype='text/plain')
+        # upload local files to google store
+        blob = bucket.blob(remote_file_path + source_file_name)
+        blob.upload_from_filename(tmp_file)
+
+        # clean up local files
+        os.remove(tmp_file)
+
+        logger.info('File {} uploaded to {}.'.format(source_file_path + source_file_name, blob))
+
+    return Response(json.dumps(source_file_config), mimetype='text/plain')
 
 
 if __name__ == '__main__':
     # Set up logging
     format_string = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    logger = logging.getLogger('redis')
+    logger = logging.getLogger('google-storage-microservice')
 
     # Log to stdout
     stdout_handler = logging.StreamHandler()
