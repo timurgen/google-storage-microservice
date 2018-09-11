@@ -67,6 +67,8 @@ def get_entities():
             # do something with the key
             entity = {"_id": str.split(blob.name, "/")[-1]}  # keep file name only
             if entity["_id"] == "": continue  # skip if no file name
+
+            entity["file_id"] = entity["_id"]
             expiration = datetime.datetime(2055, 7, 14, 12, 30)
             entity["file_url"] = blob.generate_signed_url(expiration, method="GET")
 
