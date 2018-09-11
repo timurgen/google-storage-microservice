@@ -8,7 +8,11 @@
 
 ## Usage
 
-The microservice listens to `/config` at port 5000 and expects JSON formatted config for where it is to fetch source files:
+The microservice listens to the following endpoints at port 5000:
+
+`/upload` - JSON formatted config for where it is to fetch source files for upload to google storage
+
+`/entities` - returns JSON formatted entities listing all files at the google storage
 
 ```
 [
