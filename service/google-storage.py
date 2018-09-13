@@ -84,6 +84,7 @@ def get_entities():
 
 
 # download file from google storage
+# DEPRECATED
 @app.route("/download", methods=["POST"])
 def download():
     # catch the posted data
@@ -127,7 +128,7 @@ def upload():
         logger.debug("source file: {}{}".format(source_file_path, source_file_name))
 
         # download hosted files locally
-        r = requests.get(source_file_path + source_file_name, stream=True)
+        r = requests.get(source_file_path, stream=True)
 
         tmp_file = "tmp"
         with open(tmp_file, "wb") as fd:
