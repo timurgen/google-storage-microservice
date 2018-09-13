@@ -71,6 +71,8 @@ def get_entities():
             entity["file_id"] = entity["_id"]
             expiration = datetime.datetime(2055, 7, 14, 12, 30)
             entity["file_url"] = blob.generate_signed_url(expiration, method="GET")
+            entity["updated"] = str(blob.updated)
+            entity["generation"] = blob.generation
 
             if not first:
                 yield ","
