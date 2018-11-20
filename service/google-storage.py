@@ -1,4 +1,4 @@
-from flask import Flask, Response, request, abort, send_file
+from flask import Flask, Response, request, abort, send_file, stream_with_context
 import datetime
 import json
 import os
@@ -71,7 +71,7 @@ def get_entities(bucket_name):
         response = Response(generate(), mimetype="application/json")
         return response
     except Exception as e:
-        logging.error(e.message)
+        logging.error(str(e))
         abort(e.code, e.message)
 
 
@@ -86,11 +86,21 @@ def download(bucket, filename):
     storage_client = storage.Client()
     bucket = storage_client.get_bucket(bucket)
     try:
-        blob = bucket.blob(filename)
-        file_data = blob.download_as_string()
-        return send_file(BytesIO(file_data), attachment_filename=blob.name, mimetype=blob.content_type)
+        blob = bucket.blob(filename, chunk_size=262144*4*10)
+        chunk_size = 262144*4*10
+        def generate():
+            file_data = blob.download_as_string(start=0, end=chunk_size)
+            yield file_data
+            counter = chunk_size + 1 # both start and end are inclusive
+            while len(file_data) >= chunk_size:
+                file_data = blob.download_as_string(start=counter, end=counter + chunk_size-1)
+                yield file_data
+                counter += chunk_size
+
+        # return send_file(BytesIO(file_data), attachment_filename=blob.name, mimetype=blob.content_type)
+        return Response(generate(), headers={'Content-Type': blob.content_type})
     except Exception as e:
-        logging.error(e.message)
+        logging.error(str(e))
         abort(e.code, e.message)
 
 
