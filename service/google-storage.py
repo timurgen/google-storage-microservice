@@ -4,8 +4,6 @@ import json
 import os
 import logging
 from google.cloud import storage
-from io import BytesIO
-import requests
 
 app = Flask(__name__)
 
@@ -80,14 +78,15 @@ def download(bucket, filename):
     """
     Downloads file with given name from given bucket
     :param bucket: Google cloud storage bucket name
-    :param filename: path to file (dsimply file name for files in root folder)
+    :param filename: path to file (simply file name for files in root folder)
     :return: file
     """
     storage_client = storage.Client()
     bucket = storage_client.get_bucket(bucket)
     try:
-        blob = bucket.blob(filename, chunk_size=262144*4*10)
-        chunk_size = 262144*4*10
+        chunk_size = 262144 * 4 * 10
+        blob = bucket.blob(filename, chunk_size=chunk_size)
+
         def generate():
             file_data = blob.download_as_string(start=0, end=chunk_size)
             yield file_data
@@ -97,7 +96,6 @@ def download(bucket, filename):
                 yield file_data
                 counter += chunk_size
 
-        # return send_file(BytesIO(file_data), attachment_filename=blob.name, mimetype=blob.content_type)
         return Response(generate(), headers={'Content-Type': blob.content_type})
     except Exception as e:
         logging.error(str(e))
@@ -136,4 +134,4 @@ if __name__ == "__main__":
 
     logger.setLevel(logging.DEBUG)
 
-    app.run(threaded=True, debug=True, host='0.0.0.0')
+    app.run(threaded=True, debug=True, host='0.0.0.0', port=os.environ.get('PORT', 5000))
