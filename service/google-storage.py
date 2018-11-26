@@ -107,16 +107,22 @@ def upload(bucket_name):
     """
     Upload file to given bucket
     :param bucket_name:
-    :return: 200 code if everyting OK
+    :return: 200 code if everything OK
     """
     storage_client = storage.Client()
     bucket = storage_client.get_bucket(bucket_name)
     files = request.files
 
+    local_path = request.headers.get('local_path')
+
     for file in files:
         if files[file].filename == '':
             continue
         filename = files[file].filename
+
+        if local_path:
+            filename = "{}/{}".format(local_path, filename)
+
         blob = bucket.blob(filename)
         blob.upload_from_file(files[file])
     return Response()
