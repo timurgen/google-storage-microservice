@@ -12,7 +12,7 @@ The microservice listens to the following endpoints at port 5000:
 
 `/upload` - JSON formatted config for where it is to fetch source files for upload to google storage
 
-`/entities` - returns JSON formatted entities listing all files at the google storage  
+`/datasets/<bucket name>/entities` - returns JSON formatted entities listing all files at the google storage from bucket with <bucket name>
 Available query parameters (all optional)  
 * expire: date time in format %Y-%m-%d %H:%M:%S - overrides default expire time
 * with_subfolders: False by default if assigned will include blobs from subfolders
@@ -28,6 +28,8 @@ Available query parameters (all optional)
 
 `/download/<bucket name>/<file path>` - downloads file from Google Storage Bucket  
 file path may include slashes to download file from bucket sub-folder
+
+`/upload/<bucket_name>` - uploads file to bucket
 
 
 ## Example System Config
