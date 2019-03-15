@@ -16,6 +16,7 @@ The microservice listens to the following endpoints at port 5000:
 Available query parameters (all optional)  
 * expire: date time in format %Y-%m-%d %H:%M:%S - overrides default expire time
 * with_subfolders: False by default if assigned will include blobs from subfolders
+* with_prefix: to filter blobs by prefix
 ```
 [
     {
