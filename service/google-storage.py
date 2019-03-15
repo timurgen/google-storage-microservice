@@ -7,6 +7,8 @@ from google.cloud import storage
 
 app = Flask(__name__)
 
+__version__ = '0.0.2'
+
 # Get env.vars
 credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
 credentials = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_CONTENT")
@@ -27,16 +29,18 @@ def get_entities(bucket_name):
     Available query parameters (all optional)
         expire: date time in format %Y-%m-%d %H:%M:%S - overrides default expire time
         with_subfolders: False by default if assigned will include blobs from subfolders
+        with_prefix: optional, to filter blobs
     :return:
     """
 
     set_expire = request.args.get('expire')
     with_subfolders = request.args.get('with_subfolders')
+    with_prefix = request.args.get('with_prefix')
 
     def generate():
         """Lists all the blobs in the bucket."""
 
-        blobs = bucket.list_blobs()
+        blobs = bucket.list_blobs(prefix=with_prefix)
         first = True
         yield "["
         for blob in blobs:
@@ -120,9 +124,9 @@ def upload(bucket_name):
             continue
         filename = files[file].filename
 
+        logging.info("uploading {} to {}".format(filename, local_path))
         if local_path:
             filename = "{}/{}".format(local_path, filename)
-
         blob = bucket.blob(filename)
         blob.upload_from_file(files[file])
     return Response()
@@ -139,5 +143,6 @@ if __name__ == "__main__":
     logger.addHandler(stdout_handler)
 
     logger.setLevel(logging.DEBUG)
+    logging.info("Starting service v.{}".format(__version__))
 
     app.run(threaded=True, debug=True, host='0.0.0.0', port=os.environ.get('PORT', 5000))
