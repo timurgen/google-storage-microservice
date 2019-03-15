@@ -1,6 +1,6 @@
 FROM python:3-alpine
 
-MAINTAINER Geir Atle Hegsvold "geir.hegsvold@sesam.io"
+MAINTAINER Geir Atle Hegsvold "timur.samkharadze@gmail.com"
 
 COPY ./service /service
 WORKDIR /service
