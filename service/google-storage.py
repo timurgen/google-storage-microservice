@@ -7,6 +7,12 @@ from google.cloud import storage
 
 app = Flask(__name__)
 
+if os.environ.get("PROFILE"):
+    from werkzeug.contrib.profiler import ProfilerMiddleware
+
+    app.config['PROFILE'] = True
+    app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[50])
+
 __version__ = '0.0.2'
 
 # Get env.vars
@@ -24,6 +30,7 @@ with open(credentials_path, "wb") as out_file:
 
 @app.route("/datasets/<bucket_name>/entities", methods=["GET"])
 def get_entities(bucket_name):
+    logging.info("Serving request for bucket %s" % bucket_name)
     """
     Endpoint to read entities from gcp bucket, add signed url and return
     Available query parameters (all optional)
@@ -40,10 +47,21 @@ def get_entities(bucket_name):
     def generate():
         """Lists all the blobs in the bucket."""
 
-        blobs = bucket.list_blobs(prefix=with_prefix)
+        count = 0
+
+        if not set_expire:
+            expiration = datetime.datetime(2183, 9, 8, 13, 15)
+        else:
+            expiration = datetime.datetime.strptime(set_expire, '%Y-%m-%d %H:%M:%S')
+
+        iterator = bucket.list_blobs(prefix=with_prefix,
+                                     max_results=int(os.environ.get("LIMIT")) if os.environ.get(
+                                         "LIMIT") else None,
+                                     fields="nextPageToken,items(name,generation,updated)")
         first = True
         yield "["
-        for blob in blobs:
+
+        for blob in iterator:
             entity = {"_id": blob.name}
             if '/' in entity["_id"] and not with_subfolders:  # take only root folder
                 continue
@@ -53,11 +71,6 @@ def get_entities(bucket_name):
 
             entity["file_id"] = entity["_id"]
 
-            if not set_expire:
-                expiration = datetime.datetime(2183, 9, 8, 13, 15)
-            else:
-                expiration = datetime.datetime.strptime(set_expire, '%Y-%m-%d %H:%M:%S')
-
             entity["file_url"] = blob.generate_signed_url(expiration, method="GET")
             entity["updated"] = str(blob.updated)
             entity["generation"] = blob.generation
@@ -65,8 +78,11 @@ def get_entities(bucket_name):
             if not first:
                 yield ","
             yield json.dumps(entity)
+            count += 1
             first = False
         yield "]"
+        logging.info("%d elements processed", count)
+
     try:
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(bucket_name)
@@ -94,9 +110,9 @@ def download(bucket, filename):
         def generate():
             file_data = blob.download_as_string(start=0, end=chunk_size)
             yield file_data
-            counter = chunk_size + 1 # both start and end are inclusive
+            counter = chunk_size + 1  # both start and end are inclusive
             while len(file_data) >= chunk_size:
-                file_data = blob.download_as_string(start=counter, end=counter + chunk_size-1)
+                file_data = blob.download_as_string(start=counter, end=counter + chunk_size - 1)
                 yield file_data
                 counter += chunk_size
 
@@ -145,4 +161,5 @@ if __name__ == "__main__":
     logger.setLevel(logging.DEBUG)
     logging.info("Starting service v.{}".format(__version__))
 
-    app.run(threaded=True, debug=True, host='0.0.0.0', port=os.environ.get('PORT', 5000))
+    app.run(threaded=True, debug=True if os.environ.get("PROFILE") else False, host='0.0.0.0',
+            port=os.environ.get('PORT', 5000))
