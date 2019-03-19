@@ -85,8 +85,8 @@ def get_entities(bucket_name):
             yield json.dumps(entity)
             count += 1
             first = False
-            yield "]"
-            logging.info("%d elements processed", count)
+        yield "]"
+        logging.info("%d elements processed", count)
 
     try:
         storage_client = storage.Client()
