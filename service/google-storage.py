@@ -3,7 +3,9 @@ import datetime
 import json
 import os
 import logging
+import google.auth
 from google.cloud import storage
+from openssl_signer import OpenSSLSigner
 
 app = Flask(__name__)
 
@@ -46,8 +48,11 @@ def get_entities(bucket_name):
 
     def generate():
         """Lists all the blobs in the bucket."""
-
         count = 0
+
+        credentials_obj, _ = google.auth.default()
+        new_signer = OpenSSLSigner.from_service_account_file(credentials_path)
+        credentials_obj._signer = new_signer
 
         if not set_expire:
             expiration = datetime.datetime(2183, 9, 8, 13, 15)
@@ -80,8 +85,8 @@ def get_entities(bucket_name):
             yield json.dumps(entity)
             count += 1
             first = False
-        yield "]"
-        logging.info("%d elements processed", count)
+            yield "]"
+            logging.info("%d elements processed", count)
 
     try:
         storage_client = storage.Client()
