@@ -1,4 +1,6 @@
-Flask
-google-cloud-storage
-requests
+Flask==1.0.2
+Werkzeug==0.14.1
+google-cloud-storage==1.14.0
+requests==2.21.0
 pyopenssl
+cherrypy==18.1.0
