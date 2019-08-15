@@ -1,5 +1,7 @@
 # google-storage-microservice
 
+[![Build Status](https://travis-ci.org/sesam-community/google-storage.svg?branch=master)](https://travis-ci.org/sesam-community/google-storage)
+
 ## Environment variables
 
 `GOOGLE_APPLICATION_CREDENTIALS` - Path to Google Storage credential file (json format file for service account authentication). 
