@@ -1,4 +1,4 @@
-from flask import Flask, Response, request, abort, send_file, stream_with_context
+from flask import Flask, Response, request, abort
 import datetime
 import json
 import os
@@ -11,7 +11,6 @@ app = Flask(__name__)
 
 if os.environ.get("PROFILE"):
     from werkzeug.contrib.profiler import ProfilerMiddleware
-
     app.config['PROFILE'] = True
     app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[50])
 
@@ -26,8 +25,9 @@ log_level = logging.getLevelName(os.environ.get("LOG_LEVEL", "INFO"))
 logging.basicConfig(level=log_level)  # dump log to stdout
 
 # write out service config from env var to known file
-with open(credentials_path, "wb") as out_file:
-    out_file.write(credentials.encode())
+if credentials:
+    with open(credentials_path, "wb") as out_file:
+        out_file.write(credentials.encode())
 
 
 @app.route("/datasets/<bucket_name>/entities", methods=["GET"])
@@ -162,9 +162,26 @@ if __name__ == "__main__":
     stdout_handler = logging.StreamHandler()
     stdout_handler.setFormatter(logging.Formatter(format_string))
     logger.addHandler(stdout_handler)
-
-    logger.setLevel(logging.DEBUG)
+    debug = True if os.environ.get("PROFILE") else False
+    logger.setLevel(logging.DEBUG if debug else logging.INFO)
     logging.info("Starting service v.{}".format(__version__))
+    port = os.environ.get('PORT', 5000)
+    if debug:
+        app.run(threaded=True, debug=debug, host='0.0.0.0', port=port)
+    else:
+        import cherrypy
+        cherrypy.tree.graft(app, '/')
 
-    app.run(threaded=True, debug=True if os.environ.get("PROFILE") else False, host='0.0.0.0',
-            port=os.environ.get('PORT', 5000))
+        # Set the configuration of the web server
+        cherrypy.config.update({
+            'environment': 'production',
+            'engine.autoreload_on': False,
+            'log.screen': True,
+            'server.socket_port': port,
+            'server.socket_host': '0.0.0.0',
+            'server.thread_pool': 10
+        })
+
+        # Start the CherryPy WSGI web server
+        cherrypy.engine.start()
+        cherrypy.engine.block()
