@@ -1,4 +1,4 @@
-# google-storage-microservice
+# google-storage
 
 [![Build Status](https://travis-ci.org/sesam-community/google-storage.svg?branch=master)](https://travis-ci.org/sesam-community/google-storage)
 
@@ -45,8 +45,45 @@ file path may include slashes to download file from bucket sub-folder
       "GOOGLE_APPLICATION_CREDENTIALS": "google-store-credentials.json",
       "GOOGLE_APPLICATION_CREDENTIALS_CONTENT": "$SECRET(google-storage-credential-content)"
     },
-    "image": "sesamcommunity/google-storage-microservice:latest",
+    "image": "sesamcommunity/google-storage:latest",
     "port": 5000
   }
 }
 ```
+
+## Example Pipe Config
+```json
+{
+  "_id": "<pipe id>",
+  "type": "pipe",
+  "source": {
+    "type": "conditional",
+    "alternatives": {
+      "prod": {
+        "type": "json",
+        "system": "<system id>",
+        "is_since_comparable": true,
+        "supports_since": true,
+        "url": "/datasets/<path to GCP bucket>/entities?with_subfolders=true"
+      },
+      "test": {
+        "type": "embedded",
+        "entities": []
+      }
+    },
+    "condition": "$ENV(current-env)"
+  },
+  "transform": {
+    "type": "dtl",
+    "rules": {
+      "default": [
+        ["copy", "*"]
+      ]
+    }
+  },
+  "pump": {
+    "cron_expression": "0 0 * * ?"
+  }
+}
+
+``` 
