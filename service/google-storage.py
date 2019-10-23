@@ -15,7 +15,7 @@ if os.environ.get("PROFILE"):
     app.config['PROFILE'] = True
     app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[50])
 
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 
 # Get env.vars
 credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
