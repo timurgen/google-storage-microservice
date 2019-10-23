@@ -10,11 +10,12 @@ from openssl_signer import OpenSSLSigner
 app = Flask(__name__)
 
 if os.environ.get("PROFILE"):
-    from werkzeug.contrib.profiler import ProfilerMiddleware
+    from werkzeug.middleware.profiler import ProfilerMiddleware
+
     app.config['PROFILE'] = True
     app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[50])
 
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 
 # Get env.vars
 credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
@@ -32,7 +33,7 @@ if credentials:
 
 @app.route("/datasets/<bucket_name>/entities", methods=["GET"])
 def get_entities(bucket_name):
-    logging.info("Serving request for bucket %s" % bucket_name)
+    logging.info(f"serving request for bucket {bucket_name}")
     """
     Endpoint to read entities from gcp bucket, add signed url and return
     Available query parameters (all optional)
@@ -59,10 +60,10 @@ def get_entities(bucket_name):
         else:
             expiration = datetime.datetime.strptime(set_expire, '%Y-%m-%d %H:%M:%S')
 
-        iterator = bucket.list_blobs(prefix=with_prefix,
-                                     max_results=int(os.environ.get("LIMIT")) if os.environ.get(
-                                         "LIMIT") else None,
-                                     fields="nextPageToken,items(name,generation,updated)")
+        iterator = storage_client.list_blobs(bucket_name, prefix=with_prefix,
+                                             max_results=int(os.environ.get("LIMIT")) if os.environ.get(
+                                                 "LIMIT") else None,
+                                             fields="nextPageToken,items(name,generation,updated)")
         first = True
         yield "["
 
@@ -86,15 +87,14 @@ def get_entities(bucket_name):
             count += 1
             first = False
         yield "]"
-        logging.info("%d elements processed", count)
+        logging.info(f"{count} elements processed")
 
     try:
         storage_client = storage.Client()
-        bucket = storage_client.get_bucket(bucket_name)
         response = Response(generate(), mimetype="application/json")
         return response
     except Exception as e:
-        logging.error(str(e))
+        logging.error(f'error occurred while listing blobs due to: {str(e)}')
         abort(e.code, e.message)
 
 
@@ -107,8 +107,9 @@ def download(bucket, filename):
     :return: file
     """
     storage_client = storage.Client()
-    bucket = storage_client.get_bucket(bucket)
+    bucket = storage_client.bucket(bucket)
     try:
+        logging.debug(f'trying to download file {filename} from {bucket}')
         chunk_size = 262144 * 4 * 10
         blob = bucket.blob(filename, chunk_size=chunk_size)
 
@@ -123,7 +124,7 @@ def download(bucket, filename):
 
         return Response(generate(), headers={'Content-Type': blob.content_type})
     except Exception as e:
-        logging.error(str(e))
+        logging.error(f'error occurred while downloading blob due to: {str(e)}')
         abort(e.code, e.message)
 
 
@@ -135,7 +136,7 @@ def upload(bucket_name):
     :return: 200 code if everything OK
     """
     storage_client = storage.Client()
-    bucket = storage_client.get_bucket(bucket_name)
+    bucket = storage_client.bucket(bucket_name)
     files = request.files
 
     local_path = request.headers.get('local_path')
@@ -145,9 +146,9 @@ def upload(bucket_name):
             continue
         filename = files[file].filename
 
-        logging.info("uploading {} to {}".format(filename, local_path))
+        logging.info(f"uploading {filename} to {local_path}")
         if local_path:
-            filename = "{}/{}".format(local_path, filename)
+            filename = f"{local_path}/{filename}"
         blob = bucket.blob(filename)
         blob.upload_from_file(files[file])
     return Response()
@@ -164,19 +165,20 @@ if __name__ == "__main__":
     logger.addHandler(stdout_handler)
     debug = True if os.environ.get("PROFILE") else False
     logger.setLevel(logging.DEBUG if debug else logging.INFO)
-    logging.info("Starting service v.{}".format(__version__))
+    logging.info(f"starting service v.{__version__}")
     port = os.environ.get('PORT', 5000)
     if debug:
         app.run(threaded=True, debug=debug, host='0.0.0.0', port=port)
     else:
         import cherrypy
+
         cherrypy.tree.graft(app, '/')
 
         # Set the configuration of the web server
         cherrypy.config.update({
             'environment': 'production',
             'engine.autoreload_on': False,
-            'log.screen': True,
+            'log.screen': False,
             'server.socket_port': int(port),
             'server.socket_host': '0.0.0.0',
             'server.thread_pool': 10
