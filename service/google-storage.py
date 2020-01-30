@@ -146,10 +146,12 @@ def upload(bucket_name):
             continue
         filename = files[file].filename
 
+        content_type = files[file].content_type
         logging.info(f"uploading {filename} to {local_path}")
         if local_path:
             filename = f"{local_path}/{filename}"
         blob = bucket.blob(filename)
+        blob.content_type=content_type
         blob.upload_from_file(files[file])
     return Response()
 

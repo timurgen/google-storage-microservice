@@ -23,6 +23,7 @@ Available query parameters (all optional)
 [
     {
         "file_id": "some-file-name",
+        "content_type": your_content_type",
         "file_url": "url/to/file/" <- signed URL with expiration date
     },
     ...
