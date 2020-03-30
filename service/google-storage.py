@@ -146,11 +146,42 @@ def upload(bucket_name):
             continue
         filename = files[file].filename
 
+        content_type = files[file].content_type
         logging.info(f"uploading {filename} to {local_path}")
         if local_path:
             filename = f"{local_path}/{filename}"
         blob = bucket.blob(filename)
+        blob.content_type=content_type
         blob.upload_from_file(files[file])
+    return Response()
+
+
+@app.route("/sink/<bucket_name>", methods=["POST"])
+def sink(bucket_name):
+    storage_client = storage.Client()
+    bucket = storage_client.get_bucket(bucket_name)
+    entities = request.get_json()
+
+    try:
+        for entity in entities:
+            filename = entity['filename']
+            data = entity['data']
+
+            blob = bucket.blob(filename)
+
+            if entity['_deleted']:
+                try:
+                    blob.delete()
+                    logger.info('File {} deleted from bucket.'.format(filename))
+                except google.api_core.exceptions.NotFound:
+                    logger.info('File {} does not exist in bucket.'.format(filename))
+            else:
+                blob.upload_from_string(json.dumps(data).encode("utf-8"), content_type="application/json")
+                logger.info('File uploaded to {}.'.format(filename))
+    except Exception as e:
+            logger.error(str(e))
+            abort(type(e).__name__, str(e))
+
     return Response()
 
 

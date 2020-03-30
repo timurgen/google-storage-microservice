@@ -23,6 +23,7 @@ Available query parameters (all optional)
 [
     {
         "file_id": "some-file-name",
+        "content_type": your_content_type",
         "file_url": "url/to/file/" <- signed URL with expiration date
     },
     ...
@@ -34,6 +35,8 @@ file path may include slashes to download file from bucket sub-folder
 
 `/upload/<bucket_name>` - uploads file to bucket
 
+`/sink/<bucket_name>` - Sesam json push sink for sending json entities to a Google Storage Bucket and save them as files.
+entities must have the data and filename properties, data should contain the json to be written to the file, filename should be the name of the file.
 
 ## Example System Config
 ```
